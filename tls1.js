@@ -447,10 +447,10 @@ crypto.constants.SSL_OP_NO_TICKET | crypto.constants.SSL_OP_NO_SSLv2 | crypto.co
                                                   if (status === 302 || status === 301) {
                                                        const redirect = res["location"];
                                                        url = new URL(redirect, url.href);
-               tlsSocket.close();
+               tlsSocket.destroy();
                                                   }
 if (status === 403 && closereq) {
-                                   tlsSocket.close();
+                                   tlsSocket.destroy();
                                    tlsSocket.end();
                                    tlsSocket.destroy();
             }
