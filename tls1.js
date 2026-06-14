@@ -391,7 +391,7 @@ crypto.constants.SSL_OP_NO_TICKET | crypto.constants.SSL_OP_NO_SSLv2 | crypto.co
                     }
                     main()
                     tlsSocket.on('error', () => {
-                        tlsSocket.close(() => tlsSocket.destroy())
+                        tlsSocket.destroy(() => tlsSocket.destroy())
                     })
                     return
                 }
