@@ -1,6 +1,6 @@
 const net = require('net');
 const tls = require('tls');
-const HPACK = require('hpack');
+//const HPACK = require('hpack');
 const cluster = require('cluster');
 const fs = require('fs');
 const os = require('os');
@@ -8,6 +8,54 @@ const crypto = require('crypto');
 const { exec } = require('child_process');
 const chalk = require('chalk');
 const http2 = require('http2');
+
+// HPACK Simple Implementation
+class HPACK {
+    constructor() {
+        this.table = [];
+        this.tableSize = 4096;
+    }
+    
+    setTableSize(size) {
+        this.tableSize = size;
+    }
+    
+    encode(headers) {
+        let result = Buffer.alloc(0);
+        for (let [key, value] of headers) {
+            if (!value) continue;
+            // Literal Header Field without indexing
+            result = Buffer.concat([result, Buffer.from([0x40])]);
+            result = Buffer.concat([result, Buffer.from(key, 'utf8')]);
+            result = Buffer.concat([result, Buffer.from([0x00])]);
+            result = Buffer.concat([result, Buffer.from(value, 'utf8')]);
+        }
+        return result;
+    }
+    
+    decode(data) {
+        const headers = [];
+        let offset = 0;
+        while (offset < data.length) {
+            if (data[offset] === 0x40) {
+                offset++;
+                let keyEnd = offset;
+                while (keyEnd < data.length && data[keyEnd] !== 0x00) keyEnd++;
+                const key = data.subarray(offset, keyEnd).toString('utf8');
+                offset = keyEnd + 1;
+                let valueEnd = offset;
+                while (valueEnd < data.length) valueEnd++;
+                const value = data.subarray(offset, valueEnd).toString('utf8');
+                headers.push([key, value]);
+                offset = valueEnd;
+            } else {
+                offset++;
+            }
+        }
+        return headers;
+    }
+}
+
 ignoreNames = ['RequestError', 'StatusCodeError', 'CaptchaError', 'CloudflareError', 'ParseError', 'ParserError', 'TimeoutError', 'JSONError', 'URLError', 'InvalidURL', 'ProxyError'], ignoreCodes = ['SELF_SIGNED_CERT_IN_CHAIN', 'ECONNRESET', 'ERR_ASSERTION', 'ECONNREFUSED', 'EPIPE', 'EHOSTUNREACH', 'ETIMEDOUT', 'ESOCKETTIMEDOUT', 'EPROTO', 'EAI_AGAIN', 'EHOSTDOWN', 'ENETRESET', 'ENETUNREACH', 'ENONET', 'ENOTCONN', 'ENOTFOUND', 'EAI_NODATA', 'EAI_NONAME', 'EADDRNOTAVAIL', 'EAFNOSUPPORT', 'EALREADY', 'EBADF', 'ECONNABORTED', 'EDESTADDRREQ', 'EDQUOT', 'EFAULT', 'EHOSTUNREACH', 'EIDRM', 'EILSEQ', 'EINPROGRESS', 'EINTR',
 'EINVAL', 'EIO', 'EISCONN', 'EMFILE', 'EMLINK', 'EMSGSIZE', 'ENAMETOOLONG', 'ENETDOWN', 'ENOBUFS', 'ENODEV', 'ENOENT', 'ENOMEM', 'ENOPROTOOPT', 'ENOSPC', 'ENOSYS', 'ENOTDIR', 'ENOTEMPTY', 'ENOTSOCK', 'EOPNOTSUPP', 'EPERM', 'EPIPE', 'EPROTONOSUPPORT', 'ERANGE', 'EROFS', 'ESHUTDOWN', 'ESPIPE', 'ESRCH', 'ETIME', 'ETXTBSY', 'EXDEV', 'UNKNOWN', 'DEPTH_ZERO_SELF_SIGNED_CERT', 'UNABLE_TO_VERIFY_LEAF_SIGNATURE', 'CERT_HAS_EXPIRED', 'CERT_NOT_YET_VALID'];
 require("events").EventEmitter.defaultMaxListeners = Number.MAX_VALUE;
